@@ -1,823 +1,606 @@
-import Image from 'next/image'
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card'
-import { Button } from '../components/ui/button'
-import { Input } from '../components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
+import React, { useState } from 'react';
+import { Button } from '../components/ui/button';
+import { Card } from '../components/ui/card';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { formatCurrency } from '../lib/utils';
+import { useMobile } from '../hooks/use-mobile';
 
-// Sample property data
-const featuredProperties = [
+// Types
+interface Project {
+  id: number;
+  title: string;
+  description: string;
+  price: number;
+  bedrooms: number;
+  bathrooms: number;
+  area: number;
+  location: string;
+  image: string;
+  featured: boolean;
+  type: string;
+}
+
+interface Service {
+  id: number;
+  title: string;
+  description: string;
+  icon: string;
+  features: string[];
+}
+
+interface Testimonial {
+  id: number;
+  name: string;
+  position: string;
+  company: string;
+  content: string;
+  avatar: string;
+  rating: number;
+}
+
+interface Agent {
+  id: number;
+  name: string;
+  position: string;
+  image: string;
+  phone: string;
+  email: string;
+  properties: number;
+  rating: number;
+}
+
+// Mock data
+const FEATURED_PROJECTS: Project[] = [
   {
     id: 1,
-    title: 'Luxury Villa in Dubai Marina',
-    description: 'Stunning 5-bedroom villa with panoramic sea views',
-    price: 'AED 5,800,000',
-    image: '/image/1.png',
-    type: 'Villa'
+    title: "Luxury Waterfront Villa",
+    description: "Stunning waterfront property with panoramic views and modern amenities.",
+    price: 1250000,
+    bedrooms: 4,
+    bathrooms: 3,
+    area: 2800,
+    location: "Malibu, CA",
+    image: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    featured: true,
+    type: "Villa"
   },
   {
     id: 2,
-    title: 'Modern Apartment Downtown',
-    description: 'Spacious 3-bedroom apartment with city views',
-    price: 'AED 2,450,000',
-    image: '/image/2/1.jpg',
-    type: 'Apartment'
+    title: "Modern Downtown Penthouse",
+    description: "Sleek penthouse in the heart of downtown with spectacular city views.",
+    price: 980000,
+    bedrooms: 3,
+    bathrooms: 2,
+    area: 2100,
+    location: "San Francisco, CA",
+    image: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80",
+    featured: true,
+    type: "Penthouse"
   },
   {
     id: 3,
-    title: 'Waterfront Villa in Palm Jumeirah',
-    description: 'Exclusive waterfront property with private beach',
-    price: 'AED 12,500,000',
-    image: '/image/3/1.jpg',
-    type: 'Villa'
+    title: "Rustic Country Estate",
+    description: "Spacious country estate with extensive land and charming architecture.",
+    price: 1850000,
+    bedrooms: 5,
+    bathrooms: 4,
+    area: 4200,
+    location: "Napa Valley, CA",
+    image: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
+    featured: true,
+    type: "Estate"
   }
-]
+];
 
-export default function Home() {
-  const [searchTerm, setSearchTerm] = useState('')
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState('buy')
+const SERVICES: Service[] = [
+  {
+    id: 1,
+    title: "Property Buying",
+    description: "Expert guidance to find your dream home at the best price.",
+    icon: "house",
+    features: ["Market analysis", "Property tours", "Negotiation support"]
+  },
+  {
+    id: 2,
+    title: "Property Selling",
+    description: "Comprehensive marketing and sales strategies for maximum returns.",
+    icon: "sign",
+    features: ["Home staging", "Professional photography", "Targeted marketing"]
+  },
+  {
+    id: 3,
+    title: "Property Management",
+    description: "Full-service management for rental properties and investments.",
+    icon: "building",
+    features: ["Tenant screening", "Rent collection", "Maintenance coordination"]
+  }
+];
 
-  // Mobile menu toggle
-  const toggleMenu = () => setIsMenuOpen(!isMenuOpen)
+const TESTIMONIALS: Testimonial[] = [
+  {
+    id: 1,
+    name: "Jennifer Smith",
+    position: "Homeowner",
+    company: "Tech Innovations Inc.",
+    content: "Working with Estatery was the best decision we made when purchasing our new home. Their attention to detail and market knowledge made the process smooth and stress-free.",
+    avatar: "https://randomuser.me/api/portraits/women/44.jpg",
+    rating: 5
+  },
+  {
+    id: 2,
+    name: "Michael Johnson",
+    position: "Property Investor",
+    company: "Strategic Investments Group",
+    content: "The team at Estatery has helped me build a successful real estate portfolio. Their insights into emerging markets and investment strategies have been invaluable.",
+    avatar: "https://randomuser.me/api/portraits/men/32.jpg",
+    rating: 5
+  },
+  {
+    id: 3,
+    name: "Sarah Williams",
+    position: "First-time Buyer",
+    company: "Creative Solutions LLC",
+    content: "As a first-time homebuyer, I was nervous about the process, but Estatery guided me every step of the way. They answered all my questions and made me feel confident in my decision.",
+    avatar: "https://randomuser.me/api/portraits/women/68.jpg",
+    rating: 4
+  }
+];
+
+const TOP_AGENTS: Agent[] = [
+  {
+    id: 1,
+    name: "Robert Chen",
+    position: "Senior Real Estate Advisor",
+    image: "https://randomuser.me/api/portraits/men/75.jpg",
+    phone: "+1 (555) 123-4567",
+    email: "robert@estatery.com",
+    properties: 127,
+    rating: 4.9
+  },
+  {
+    id: 2,
+    name: "Emily Rodriguez",
+    position: "Luxury Property Specialist",
+    image: "https://randomuser.me/api/portraits/women/22.jpg",
+    phone: "+1 (555) 987-6543",
+    email: "emily@estatery.com",
+    properties: 98,
+    rating: 4.8
+  }
+];
+
+const HomePage: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [location, setLocation] = useState('');
+  const [propertyType, setPropertyType] = useState('all');
+  const [priceRange, setPriceRange] = useState('');
+  const isMobile = useMobile();
+
+  // Hero section search handler
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Implement search functionality
+    console.log('Searching for:', { searchQuery, location, propertyType, priceRange });
+    // Navigate to search results page or filter results
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      {/* Navigation Bar */}
-      <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center">
-              <div className="flex-shrink-0 font-bold text-2xl text-indigo-600 dark:text-indigo-400">
-                HAWSN HOUSE
+    <div className="flex flex-col min-h-screen bg-white">
+      {/* Hero Section */}
+      <section className="relative h-[90vh] overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <img 
+            src="https://images.unsplash.com/photo-1484154218962-a197022b5858?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" 
+            alt="Luxury real estate" 
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 to-black/30" />
+        </div>
+
+        {/* Hero Content */}
+        <div className="relative z-10 container mx-auto px-4 h-full flex flex-col justify-center">
+          <div className="max-w-3xl">
+            <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 leading-tight">
+              Find Your Perfect <span className="text-primary">Property</span>
+            </h1>
+            <p className="text-xl text-white/90 mb-8 max-w-2xl">
+              Discover exceptional real estate opportunities tailored to your lifestyle and investment goals.
+            </p>
+          </div>
+
+          {/* Search Form */}
+          <div className="bg-white rounded-xl shadow-2xl p-4 md:p-6 max-w-5xl">
+            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="search" className="text-sm font-medium text-gray-700">
+                  Search
+                </Label>
+                <Input
+                  id="search"
+                  placeholder="Keywords, property type, features..."
+                  className="w-full px-4 py-3 border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
-              <nav className="hidden md:ml-10 md:flex md:space-x-8">
-                <a href="#" className="text-slate-900 dark:text-white font-medium hover:text-indigo-600 dark:hover:text-indigo-400">
-                  Home
-                </a>
-                <a href="#properties" className="text-slate-600 dark:text-slate-300 font-medium hover:text-indigo-600 dark:hover:text-indigo-400">
-                  Properties
-                </a>
-                <a href="#projects" className="text-slate-600 dark:text-slate-300 font-medium hover:text-indigo-600 dark:hover:text-indigo-400">
-                  Projects
-                </a>
-                <a href="#services" className="text-slate-600 dark:text-slate-300 font-medium hover:text-indigo-600 dark:hover:text-indigo-400">
-                  Services
-                </a>
-                <a href="#contact" className="text-slate-600 dark:text-slate-300 font-medium hover:text-indigo-600 dark:hover:text-indigo-400">
-                  Contact
-                </a>
-              </nav>
-            </div>
-            <div className="hidden md:flex items-center space-x-4">
-              <Button variant="default" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                Book a Viewing
-              </Button>
-              <Button variant="secondary">
-                Login
-              </Button>
-            </div>
-            <div className="flex md:hidden">
-              <button
-                onClick={toggleMenu}
-                className="inline-flex items-center justify-center p-2 rounded-md text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 focus:outline-none"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  {isMenuOpen ? (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  ) : (
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  )}
-                </svg>
-              </button>
-            </div>
+              <div className="space-y-2">
+                <Label htmlFor="location" className="text-sm font-medium text-gray-700">
+                  Location
+                </Label>
+                <Input
+                  id="location"
+                  placeholder="City, neighborhood, ZIP..."
+                  className="w-full px-4 py-3 border-gray-300 rounded-lg focus:ring-primary focus:border-primary"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="type" className="text-sm font-medium text-gray-700">
+                  Property Type
+                </Label>
+                <select
+                  id="type"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white"
+                  value={propertyType}
+                  onChange={(e) => setPropertyType(e.target.value)}
+                >
+                  <option value="all">All Types</option>
+                  <option value="house">House</option>
+                  <option value="apartment">Apartment</option>
+                  <option value="condo">Condo</option>
+                  <option value="villa">Villa</option>
+                  <option value="townhouse">Townhouse</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="price" className="text-sm font-medium text-gray-700">
+                  Price Range
+                </Label>
+                <select
+                  id="price"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-primary focus:border-primary bg-white"
+                  value={priceRange}
+                  onChange={(e) => setPriceRange(e.target.value)}
+                >
+                  <option value="">Any Price</option>
+                  <option value="0-500000">$0 - $500,000</option>
+                  <option value="500000-1000000">$500,000 - $1M</option>
+                  <option value="1000000-2000000">$1M - $2M</option>
+                  <option value="2000000+">$2M+</option>
+                </select>
+              </div>
+              <div className="md:col-span-4 flex justify-center md:justify-end mt-2">
+                <Button
+                  type="submit"
+                  className="bg-primary hover:bg-primary/90 text-white font-medium py-3 px-8 rounded-lg shadow-lg transition-all transform hover:scale-105"
+                >
+                  Search Properties
+                </Button>
+              </div>
+            </form>
           </div>
         </div>
 
-        {/* Mobile menu */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-            <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-              <a href="#" className="block px-3 py-2 rounded-md text-base font-medium text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30">
-                Home
-              </a>
-              <a href="#properties" className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800">
-                Properties
-              </a>
-              <a href="#projects" className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800">
-                Projects
-              </a>
-              <a href="#services" className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800">
-                Services
-              </a>
-              <a href="#contact" className="block px-3 py-2 rounded-md text-base font-medium text-slate-600 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-800">
-                Contact
-              </a>
-            </div>
-            <div className="pt-4 pb-3 border-t border-slate-200 dark:border-slate-700">
-              <div className="px-4 space-y-3">
-                <Button variant="default" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">
-                  Book a Viewing
-                </Button>
-                <Button variant="secondary" className="w-full">
-                  Login
-                </Button>
+        {/* Decorative Elements */}
+        <div className="absolute bottom-10 left-0 right-0 flex justify-center animate-bounce">
+          <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose Estatery</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              We provide exceptional real estate services tailored to your unique needs and goals.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-white p-8 rounded-xl shadow-md transform transition-all hover:shadow-xl hover:-translate-y-1">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
               </div>
-            </div>
-          </div>
-        )}
-      </header>
-
-      <main>
-        {/* Hero Section */}
-        <section className="relative overflow-hidden bg-gradient-to-r from-indigo-900 to-blue-800 text-white">
-          <div className="absolute inset-0 bg-black/20 z-10"></div>
-          <div className="absolute inset-0">
-            <Image
-              src="/image/pm_bannar_476666954c_9a05633066.webp"
-              alt="Real estate banner"
-              fill
-              className="object-cover"
-              priority
-            />
-          </div>
-          <div className="container mx-auto px-4 md:px-6 py-20 md:py-32 relative z-20">
-            <div className="max-w-3xl">
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
-                Find Your Dream Property
-              </h1>
-              <p className="text-xl md:text-2xl mb-8 text-slate-100">
-                Discover exclusive real estate opportunities in prime locations
+              <h3 className="text-xl font-semibold mb-3">Expert Guidance</h3>
+              <p className="text-gray-600">
+                Our team of experienced real estate professionals provides personalized guidance through every step of the buying or selling process.
               </p>
-              <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl p-4 md:p-6">
-                <Tabs defaultValue="buy" className="w-full" onValueChange={setActiveTab}>
-                  <TabsList className="grid grid-cols-3 mb-4">
-                    <TabsTrigger value="buy">Buy</TabsTrigger>
-                    <TabsTrigger value="rent">Rent</TabsTrigger>
-                    <TabsTrigger value="sell">Sell</TabsTrigger>
-                  </TabsList>
-                  <TabsContent value="buy" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="col-span-1 md:col-span-2">
-                        <Input
-                          placeholder="Location, property name, or keywords"
-                          className="w-full mb-4"
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Input placeholder="Min Price" className="mb-4" />
-                          <Input placeholder="Max Price" className="mb-4" />
-                        </div>
-                      </div>
-                      <div className="flex flex-col justify-end">
-                        <Button variant="default" className="w-full h-12 bg-indigo-600 hover:bg-indigo-700">
-                          Search Properties
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="rent" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="col-span-1 md:col-span-2">
-                        <Input
-                          placeholder="Location, property name, or keywords"
-                          className="w-full mb-4"
-                        />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <Input placeholder="Min Price" className="mb-4" />
-                          <Input placeholder="Max Price" className="mb-4" />
-                        </div>
-                      </div>
-                      <div className="flex flex-col justify-end">
-                        <Button variant="default" className="w-full h-12 bg-indigo-600 hover:bg-indigo-700">
-                          Search Rentals
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                  <TabsContent value="sell" className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="col-span-1 md:col-span-2">
-                        <Input
-                          placeholder="Property location"
-                          className="w-full mb-4"
-                        />
-                        <Input placeholder="Property type" className="w-full mb-4" />
-                      </div>
-                      <div className="flex flex-col justify-end">
-                        <Button variant="default" className="w-full h-12 bg-indigo-600 hover:bg-indigo-700">
-                          Get Valuation
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                </Tabs>
+            </div>
+
+            <div className="bg-white p-8 rounded-xl shadow-md transform transition-all hover:shadow-xl hover:-translate-y-1">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
               </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Featured Properties */}
-        <section id="properties" className="py-16 md:py-24">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
-                Featured Properties
-              </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-300">
-                Explore our handpicked selection of premium properties
+              <h3 className="text-xl font-semibold mb-3">Extensive Network</h3>
+              <p className="text-gray-600">
+                Gain access to off-market properties and a vast network of industry professionals to find the perfect match for your needs.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {featuredProperties.map((property) => (
-                <Card key={property.id} className="overflow-hidden transition-all duration-300 hover:shadow-lg">
-                  <div className="aspect-[4/3] overflow-hidden">
-                    <Image
-                      src={property.image}
-                      alt={property.title}
-                      fill
-                      className="object-cover transition-transform duration-500 hover:scale-110"
-                    />
-                  </div>
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
-                          {property.title}
-                        </CardTitle>
-                        <CardDescription className="text-slate-500 dark:text-slate-400">
-                          {property.type}
-                        </CardDescription>
-                      </div>
-                      <Badge variant="secondary" className="bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200">
-                        {property.price}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pb-4">
-                    <p className="text-slate-600 dark:text-slate-300 line-clamp-2">
-                      {property.description}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button variant="ghost" className="text-indigo-600 dark:text-indigo-400">
-                      View Details
-                    </Button>
-                    <Button variant="default" className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                      Contact Agent
-                    </Button>
-                  </CardFooter>
-                </Card>
-              ))}
-            </div>
-            <div className="text-center mt-12">
-              <Button variant="default" className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-6">
-                View All Properties
-              </Button>
-            </div>
-          </div>
-        </section>
 
-        {/* Services Section */}
-        <section id="services" className="py-16 md:py-24 bg-slate-50 dark:bg-slate-800/50">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
-                Our Services
-              </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-300">
-                Comprehensive real estate solutions tailored to your needs
+            <div className="bg-white p-8 rounded-xl shadow-md transform transition-all hover:shadow-xl hover:-translate-y-1">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-6">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold mb-3">Transparent Process</h3>
+              <p className="text-gray-600">
+                We believe in full transparency, providing clear information and guidance to help you make informed decisions with confidence.
               </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <Card className="bg-white dark:bg-slate-900 transition-all duration-300 hover:shadow-lg">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center mb-4">
-                    <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
-                    </svg>
-                  </div>
-                  <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
-                    Property Buying
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    Expert guidance through every step of the property buying process, from property search to closing.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white dark:bg-slate-900 transition-all duration-300 hover:shadow-lg">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center mb-4">
-                    <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
-                    </svg>
-                  </div>
-                  <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
-                    Property Selling
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    Professional property marketing and sales services to help you get the best value for your property.
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white dark:bg-slate-900 transition-all duration-300 hover:shadow-lg">
-                <CardHeader>
-                  <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center mb-4">
-                    <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-                    </svg>
-                  </div>
-                  <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
-                    Property Management
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600 dark:text-slate-300">
-                    Full-service property management solutions for landlords, including tenant screening and maintenance.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Why Choose Us */}
-        <section className="py-16 md:py-24">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-slate-900 dark:text-white">
-                  Why Choose Hawson House Properties
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                  With years of experience in the real estate industry, we provide exceptional service and expertise to help you find your perfect property.
-                </p>
-                <div className="space-y-6">
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-4 w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">
-                        Expert Knowledge
-                      </h3>
-                      <p className="text-slate-600 dark:text-slate-300">
-                        Our team of experienced real estate professionals has in-depth knowledge of the local market.
-                      </p>
-                    </div>
+      {/* Featured Properties Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2">Featured Properties</h2>
+              <p className="text-gray-600">Discover our handpicked selection of exceptional properties.</p>
+            </div>
+            <Button
+              className="mt-4 md:mt-0 bg-transparent hover:bg-primary/10 text-primary border border-primary"
+            >
+              View All Properties
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {FEATURED_PROJECTS.map((project) => (
+              <Card key={project.id} className="overflow-hidden group transition-all duration-300 hover:shadow-xl">
+                <div className="relative h-64 overflow-hidden">
+                  <img
+                    src={project.image}
+                    alt={project.title}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute top-4 right-4">
+                    <span className="bg-primary text-white text-xs font-medium py-1 px-3 rounded-full">
+                      {project.type}
+                    </span>
                   </div>
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-4 w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">
-                        Personalized Service
-                      </h3>
-                      <p className="text-slate-600 dark:text-slate-300">
-                        We provide tailored solutions to meet your specific real estate needs and preferences.
-                      </p>
-                    </div>
+                </div>
+                <div className="p-6">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="text-xl font-semibold group-hover:text-primary transition-colors">
+                      {project.title}
+                    </h3>
+                    <span className="text-xl font-bold text-primary">
+                      {formatCurrency(project.price)}
+                    </span>
                   </div>
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-4 w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-4 h-4 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
+                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                    {project.description}
+                  </p>
+                  <div className="flex items-center text-gray-500 text-sm mb-6">
+                    <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    {project.location}
+                  </div>
+                  <div className="flex justify-between text-gray-700 border-t border-gray-100 pt-4">
+                    <div className="flex flex-col items-center">
+                      <span className="text-lg font-semibold">{project.bedrooms}</span>
+                      <span className="text-xs text-gray-500">Bedrooms</span>
                     </div>
-                    <div>
-                      <h3 className="text-xl font-semibold mb-2 text-slate-900 dark:text-white">
-                        Exclusive Listings
-                      </h3>
-                      <p className="text-slate-600 dark:text-slate-300">
-                        Access to premium properties that are not available to the general public.
-                      </p>
+                    <div className="flex flex-col items-center">
+                      <span className="text-lg font-semibold">{project.bathrooms}</span>
+                      <span className="text-xs text-gray-500">Bathrooms</span>
+                    </div>
+                    <div className="flex flex-col items-center">
+                      <span className="text-lg font-semibold">{project.area}</span>
+                      <span className="text-xs text-gray-500">Sq Ft</span>
                     </div>
                   </div>
                 </div>
-              </div>
-              <div className="relative">
-                <div className="absolute -inset-4 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl transform rotate-3"></div>
-                <Image
-                  src="/image/Increase_your_return_6c98d6053e.webp"
-                  alt="Real estate agent working with client"
-                  width={600}
-                  height={800}
-                  className="relative z-10 rounded-xl shadow-lg object-cover"
-                />
-              </div>
-            </div>
+                <div className="px-6 pb-6">
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-white">
+                    View Details
+                  </Button>
+                </div>
+              </Card>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Testimonials */}
-        <section className="py-16 md:py-24 bg-indigo-50 dark:bg-indigo-900/10">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4 text-slate-900 dark:text-white">
-                What Our Clients Say
-              </h2>
-              <p className="text-lg text-slate-600 dark:text-slate-300">
-                Hear from our satisfied clients about their experience with Hawson House Properties
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <Card className="bg-white dark:bg-slate-900 transition-all duration-300 hover:shadow-lg">
-                <CardHeader>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full overflow-hidden">
-                      <Image
-                        src="/placeholder-user.jpg"
-                        alt="Client"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                        Sarah Johnson
-                      </CardTitle>
-                      <CardDescription className="text-slate-500 dark:text-slate-400">
-                        Dubai Marina, UAE
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600 dark:text-slate-300 italic">
-                    "Hawson House Properties helped me find my dream apartment in Dubai Marina. Their team was professional, knowledgeable, and made the entire process smooth and stress-free."
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white dark:bg-slate-900 transition-all duration-300 hover:shadow-lg">
-                <CardHeader>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full overflow-hidden">
-                      <Image
-                        src="/placeholder-user.jpg"
-                        alt="Client"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                        James Wilson
-                      </CardTitle>
-                      <CardDescription className="text-slate-500 dark:text-slate-400">
-                        Palm Jumeirah, UAE
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600 dark:text-slate-300 italic">
-                    "The team at Hawson House exceeded my expectations. They found me a stunning villa in Palm Jumeirah that perfectly matched all my requirements. I highly recommend their services."
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="bg-white dark:bg-slate-900 transition-all duration-300 hover:shadow-lg">
-                <CardHeader>
-                  <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full overflow-hidden">
-                      <Image
-                        src="/placeholder-user.jpg"
-                        alt="Client"
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg font-bold text-slate-900 dark:text-white">
-                        Emily Chen
-                      </CardTitle>
-                      <CardDescription className="text-slate-500 dark:text-slate-400">
-                        Downtown Dubai, UAE
-                      </CardDescription>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-slate-600 dark:text-slate-300 italic">
-                    "Selling my property through Hawson House was a great decision. They marketed my apartment effectively and found a buyer within two weeks. Their negotiation skills helped me get the best price."
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+      {/* Services Preview Section */}
+      <section className="py-20 bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Services</h2>
+            <p className="text-white/80 max-w-2xl mx-auto">
+              Comprehensive real estate solutions tailored to your specific needs and goals.
+            </p>
           </div>
-        </section>
 
-        {/* Contact Section */}
-        <section id="contact" className="py-16 md:py-24">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-bold mb-6 text-slate-900 dark:text-white">
-                  Get in Touch
-                </h2>
-                <p className="text-lg text-slate-600 dark:text-slate-300 mb-8">
-                  Have questions about properties or our services? Contact us today to speak with one of our real estate experts.
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {SERVICES.map((service) => (
+              <div key={service.id} className="bg-white/10 backdrop-blur-sm rounded-xl p-8 transform transition-all hover:bg-white/15 hover:-translate-y-1">
+                <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mb-6">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-semibold mb-3">{service.title}</h3>
+                <p className="text-white/80 mb-6">
+                  {service.description}
                 </p>
-                <div className="space-y-6">
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-4 w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                <ul className="space-y-2 mb-6">
+                  {service.features.map((feature, index) => (
+                    <li key={index} className="flex items-center">
+                      <svg className="w-5 h-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                    </div>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <Button className="w-full bg-white text-blue-600 hover:bg-white/90">
+                  Learn More
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center mt-12">
+            <Button className="bg-white/20 hover:bg-white/30 text-white border border-white/30">
+              Explore All Services
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-20 bg-gray-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Clients Say</h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Hear from our satisfied clients about their experience working with Estatery.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {TESTIMONIALS.map((testimonial) => (
+              <div key={testimonial.id} className="bg-white p-8 rounded-xl shadow-md relative">
+                <div className="text-yellow-400 mb-4">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <svg key={i} className={`w-5 h-5 ${i < testimonial.rating ? 'fill-current' : 'text-gray-300'}`} fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                <p className="text-gray-600 italic mb-6">
+                  "{testimonial.content}"
+                </p>
+                <div className="flex items-center">
+                  <img
+                    src={testimonial.avatar}
+                    alt={testimonial.name}
+                    className="w-12 h-12 rounded-full object-cover mr-4"
+                  />
+                  <div>
+                    <h4 className="font-semibold text-gray-900">{testimonial.name}</h4>
+                    <p className="text-sm text-gray-500">{testimonial.position}, {testimonial.company}</p>
+                  </div>
+                </div>
+                <div className="absolute -top-4 -left-4 text-6xl text-primary/10 font-serif">"</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Agents Section */}
+      <section className="py-20">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12">
+            <div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-2">Meet Our Top Agents</h2>
+              <p className="text-gray-600">Work with our experienced real estate professionals.</p>
+            </div>
+            <Button
+              className="mt-4 md:mt-0 bg-transparent hover:bg-primary/10 text-primary border border-primary"
+            >
+              View All Agents
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {TOP_AGENTS.map((agent) => (
+              <div key={agent.id} className="flex flex-col md:flex-row bg-white rounded-xl shadow-md overflow-hidden transition-all hover:shadow-lg">
+                <div className="md:w-1/3 relative">
+                  <img
+                    src={agent.image}
+                    alt={agent.name}
+                    className="w-full h-full object-cover object-center"
+                  />
+                  <div className="absolute top-4 right-4 bg-primary text-white text-xs font-medium py-1 px-3 rounded-full">
+                    Top Agent
+                  </div>
+                </div>
+                <div className="md:w-2/3 p-6">
+                  <div className="flex justify-between items-start mb-3">
                     <div>
-                      <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">
-                        Visit Our Office
-                      </h3>
-                      <p className="text-slate-600 dark:text-slate-300">
-                        123 Business Bay, Dubai, UAE
-                      </p>
+                      <h3 className="text-xl font-semibold">{agent.name}</h3>
+                      <p className="text-primary text-sm">{agent.position}</p>
+                    </div>
+                    <div className="flex items-center text-yellow-400">
+                      <svg className="w-5 h-5 fill-current mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      <span className="font-semibold text-gray-700">{agent.rating}</span>
                     </div>
                   </div>
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-4 w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">
-                        Call Us
-                      </h3>
-                      <p className="text-slate-600 dark:text-slate-300">
-                        +971 4 123 4567
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <div className="mt-1 mr-4 w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center flex-shrink-0">
-                      <svg className="w-5 h-5 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <p className="text-gray-600 text-sm mb-6">
+                    With {agent.properties}+ properties sold and a {agent.rating} star rating, {agent.name} brings extensive market knowledge and negotiation expertise to every transaction.
+                  </p>
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                       </svg>
+                      <span className="text-sm text-gray-600">{agent.email}</span>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-semibold mb-1 text-slate-900 dark:text-white">
-                        Email Us
-                      </h3>
-                      <p className="text-slate-600 dark:text-slate-300">
-                        info@hawsonhouse.com
-                      </p>
+                    <div className="flex items-center">
+                      <svg className="w-5 h-5 text-primary mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                      </svg>
+                      <span className="text-sm text-gray-600">{agent.phone}</span>
                     </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button className="flex-1 bg-primary hover:bg-primary/90 text-white">
+                      Contact Agent
+                    </Button>
+                    <Button className="flex-1 bg-transparent hover:bg-primary/10 text-primary border border-primary">
+                      View Listings
+                    </Button>
                   </div>
                 </div>
               </div>
-              <div>
-                <Card className="bg-white dark:bg-slate-900 shadow-xl">
-                  <CardHeader>
-                    <CardTitle className="text-2xl font-bold text-slate-900 dark:text-white">
-                      Send Us a Message
-                    </CardTitle>
-                    <CardDescription className="text-slate-500 dark:text-slate-400">
-                      We'll get back to you within 24 hours
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form className="space-y-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="name" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                            Name
-                          </label>
-                          <Input id="name" placeholder="Your name" className="w-full" />
-                        </div>
-                        <div>
-                          <label htmlFor="email" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                            Email
-                          </label>
-                          <Input id="email" type="email" placeholder="Your email" className="w-full" />
-                        </div>
-                      </div>
-                      <div>
-                        <label htmlFor="phone" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                          Phone
-                        </label>
-                        <Input id="phone" placeholder="Your phone number" className="w-full" />
-                      </div>
-                      <div>
-                        <label htmlFor="subject" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                          Subject
-                        </label>
-                        <Input id="subject" placeholder="Message subject" className="w-full" />
-                      </div>
-                      <div>
-                        <label htmlFor="message" className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                          Message
-                        </label>
-                        <textarea
-                          id="message"
-                          rows={4}
-                          placeholder="Your message"
-                          className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        ></textarea>
-                      </div>
-                    </form>
-                  </CardContent>
-                  <CardFooter>
-                    <Button variant="default" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white">
-                      Send Message
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </div>
-            </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* Newsletter */}
-        <section className="py-16 md:py-20 bg-indigo-600 text-white">
-          <div className="container mx-auto px-4 md:px-6">
-            <div className="max-w-3xl mx-auto text-center">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
-                Subscribe to Our Newsletter
-              </h2>
-              <p className="text-xl text-indigo-100 mb-8">
-                Stay updated with the latest properties and market trends
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Input
-                  placeholder="Your email address"
-                  className="flex-grow bg-white/10 border-white/20 text-white placeholder:text-indigo-100 focus:border-white"
-                />
-                <Button variant="default" className="bg-white text-indigo-600 hover:bg-indigo-50">
-                  Subscribe
-                </Button>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-slate-900 text-slate-300 py-12 md:py-16">
-        <div className="container mx-auto px-4 md:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div>
-              <h3 className="text-xl font-bold text-white mb-4">
-                HAWSN HOUSE
-              </h3>
-              <p className="mb-6 text-slate-400">
-                Leading real estate platform offering premium properties and exceptional service.
-              </p>
-              <div className="flex space-x-4">
-                <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" />
-                  </svg>
-                </a>
-                <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z" />
-                  </svg>
-                </a>
-                <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                  </svg>
-                </a>
-                <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z" />
-                  </svg>
-                </a>
-              </div>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Quick Links
-              </h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a href="#properties" className="text-slate-400 hover:text-white transition-colors">
-                    Properties
-                  </a>
-                </li>
-                <li>
-                  <a href="#projects" className="text-slate-400 hover:text-white transition-colors">
-                    Projects
-                  </a>
-                </li>
-                <li>
-                  <a href="#services" className="text-slate-400 hover:text-white transition-colors">
-                    Services
-                  </a>
-                </li>
-                <li>
-                  <a href="#contact" className="text-slate-400 hover:text-white transition-colors">
-                    Contact
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Property Types
-              </h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Apartments
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Villas
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Townhouses
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Penthouses
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Commercial
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Legal
-              </h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Privacy Policy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Terms of Service
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Cookies Policy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                    Sitemap
-                  </a>
-                </li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-slate-800 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-slate-400 mb-4 md:mb-0">
-              © {new Date().getFullYear()} Hawson House Properties. All rights reserved.
+      {/* CTA Section */}
+      <section className="py-20 bg-gray-900 text-white">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to Find Your Dream Property?</h2>
+            <p className="text-white/80 text-lg mb-10 max-w-2xl mx-auto">
+              Our team of real estate experts is ready to help you find the perfect property or sell your current home.
             </p>
-            <div className="flex space-x-6">
-              <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                Privacy Policy
-              </a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                Terms of Service
-              </a>
-              <a href="#" className="text-slate-400 hover:text-white transition-colors">
-                Cookies
-              </a>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button className="bg-primary hover:bg-primary/90 text-white py-3 px-8 text-lg">
+                Get Started
+              </Button>
+              <Button className="bg-white/10 hover:bg-white/20 text-white border border-white/30 py-3 px-8 text-lg">
+                Contact Us
+              </Button>
             </div>
           </div>
         </div>
-      </footer>
+      </section>
     </div>
-  )
-}
+  );
+};
 
-// Missing component definition
-function Badge({ variant = "default", className, children, ...props }) {
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${className}`}
-      {...props}
-    >
-      {children}
-    </span>
-  )
-}
+export default HomePage;
